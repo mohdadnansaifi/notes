@@ -1,0 +1,6 @@
+flutter_native_spalsh:
+  android: true
+  ios: ture
+  web: false
+
+  color: "#FFFFFF"
