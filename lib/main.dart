@@ -1,4 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
+import 'package:notes/Pages/taskPage.dart';
+import 'package:notes/Provider/taskProvider.dart';
+import 'package:notes/Provider/textFieldProvider.dart';
+import 'package:notes/Provider/themeProvider.dart';
+import 'package:provider/provider.dart';
 import 'Pages/HomePage.dart';
 
 void main() {
@@ -11,15 +17,34 @@ class MyApp extends StatelessWidget {
   // This widget is the root of your application.
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      debugShowCheckedModeBanner: false,
-      title: 'Notes',
-      theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
-        useMaterial3: true,
-      ),
-      home:homePage()
-    );
+    return MultiProvider(providers: [
+      ChangeNotifierProvider(create: (_)=>themeProvider()),
+      ChangeNotifierProvider(create: (_)=>textFieldProvider()),
+      ChangeNotifierProvider(create: (_)=>TaskProvider())
+    ],
+    child:Builder(
+        builder: (BuildContext context){
+          final themeChanger = Provider.of<themeProvider>(context);
+      return MaterialApp(
+        debugShowCheckedModeBanner: false ,
+        title: 'notes app',
+        home: homePage(),
+        theme: ThemeData(
+          scaffoldBackgroundColor:Color(0xFFe6e6ff),
+          textTheme: GoogleFonts.poppinsTextTheme(
+            Theme.of(context).textTheme,
+          ),
+        ),
+        darkTheme: ThemeData(
+          scaffoldBackgroundColor: Colors.black,
+          brightness: Brightness.dark,
+          textTheme: GoogleFonts.poppinsTextTheme(
+            Theme.of(context).textTheme,
+          ),
+        ),
+        themeMode:themeChanger.isDark?ThemeMode.dark:ThemeMode.light ,
+      );
+    }) ,);
   }
 }
 

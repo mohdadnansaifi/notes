@@ -1,6 +1,11 @@
-
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:notes/Data/DBHelper.dart';
+import 'package:notes/Pages/taskPage.dart';
+import 'package:notes/Provider/textFieldProvider.dart';
+import 'package:notes/Provider/themeProvider.dart';
+import 'package:notes/Model/Note_model.dart';
+import 'package:provider/provider.dart';
 
 class homePage extends StatefulWidget {
   @override
@@ -11,298 +16,315 @@ class _homePageState extends State<homePage> {
   ///controller
   TextEditingController titleController = TextEditingController();
   TextEditingController descController = TextEditingController();
-
-  String errorMsg = "";
-  List<Map<String, dynamic>> allNotes = [];
-  DBHelper? dbRef;
-
+  Note? isExisting;
   @override
-  void initState() {
-    super.initState();
-    dbRef = DBHelper.getInctance;
-    getNotes();
+  bool _isInit = true;
+  @override
+
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (_isInit) {
+      Provider.of<textFieldProvider>(context, listen: false).getAllNotes();
+      _isInit = false;
+    }
   }
 
-  void getNotes() async {
-    allNotes = await dbRef!.getAllNotes();
-    setState(() {});
-  }
 
   Widget build(BuildContext context) {
+    final themeChanger = Provider.of<themeProvider>(context,listen: false);
+    print("Build");
     return Scaffold(
-
+      backgroundColor: themeChanger.isDark ? Colors.black : Color(0xFFe6e6ff),
       appBar: AppBar(
-          title: Text("Notes"),
-          centerTitle: true,
-           actions: [
-             Padding(
-               padding: const EdgeInsets.all(8.0),
-               child: Image.asset("assets/images/icon.png",width: 30,height: 30,),
-             ),
-           ],
-          backgroundColor: Color(0xfff5d7fa)),
-
-      ///all notes viewed here
-      body:
-      allNotes.isNotEmpty
-          ? ListView.builder(
-              itemCount: allNotes.length,
-              itemBuilder: (_, index) {
-                return Padding(
-                  padding: const EdgeInsets.all(8.0),
-                  child: Container(
-                    decoration: BoxDecoration(
-                        border: Border.all(color: Colors.black, width: 1),
-                        borderRadius: BorderRadius.circular(20)
-                        // bottomLeft: Radius.circular(20.0),
-                        // topRight: Radius.circular(20.0))
-                        ),
-                    child: ListTile(
-                      leading: Text(
-                        "${index + 1}",
-                        style: TextStyle(fontSize: 15),
-                      ),
-                      title: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            allNotes[index][DBHelper.COLUMN_NOTE_TITLE],
-                            style: TextStyle(
-                                fontWeight: FontWeight.w500, fontSize: 20),
-                          ),
-                          Divider(
-                            color: Colors.grey,
-                            thickness: 1,
-                          )
-                        ],
-                      ),
-                      subtitle: Text(
-                        allNotes[index][DBHelper.COLUMN_NOTE_DESC],
-                        style: TextStyle(fontSize: 15),
-                      ),
-                      trailing: SizedBox(
-                        width: 50,
-                        child: Row(
-                          children: [
-                            InkWell(
-                                onTap: () {
-                                  _showUpdateBottomSheet(
-                                      allNotes[index][DBHelper.COLUMN_NOTE_SNO],
-                                      allNotes[index]
-                                          [DBHelper.COLUMN_NOTE_TITLE],
-                                      allNotes[index]
-                                          [DBHelper.COLUMN_NOTE_DESC]);
-                                },
-                                child: Icon(
-                                  Icons.edit,
-                                  color: Colors.blueGrey,
-                                )),
-                            InkWell(
-                                onTap: () async {
-                                  _showDeleteConfirmationDialog(allNotes[index]
-                                      [DBHelper.COLUMN_NOTE_SNO]);
-                                },
-                                child: Icon(
-                                  Icons.delete,
-                                  color: Colors.blueGrey,
-                                )),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ),
-                );
-              })
-          : Center(
-              child: Text("No Notes yet!!"),
-            ),
-
-      floatingActionButton: Padding(
-        padding: const EdgeInsets.only(bottom: 30,right: 10),
-        child: FloatingActionButton(
-          onPressed: () async {
-            _showAddBottomSheet();
-          },
-          child: Image.asset("assets/images/icon.png",height: 40,width: 40,),
-        ),
+        backgroundColor: themeChanger.isDark ? Colors.black:Color(0xFFe6e6ff),
+        title: Text("Notes",
+            style:
+                GoogleFonts.poppins(fontSize: 30, fontWeight: FontWeight.w600,color: themeChanger.isDark?Colors.white:Colors.black)),
+        centerTitle: true,
+        // backgroundColor: Colors.teal,
+        actions: [
+          IconButton(
+              onPressed: () {
+                themeChanger.setTheme(!themeChanger.isDark);
+              },
+              icon: Icon(
+                themeChanger.isDark ? Icons.dark_mode : Icons.light_mode,
+                color: themeChanger.isDark ? Colors.white : Colors.black,
+              ))
+        ],
       ),
-    );
-  }
-
-  void _showAddBottomSheet() {
-    titleController.clear();
-    descController.clear();
-    showModalBottomSheet(
-        context: context,
-        builder: (context) {
-          return SingleChildScrollView(
-
-
-            child: Container(
-                padding: EdgeInsets.only(
-                  bottom: MediaQuery.of(context).viewInsets.bottom
-                ),
-                child: getBottomSheetWidget()),
-          );
-        });
-  }
-
-  void _showUpdateBottomSheet(int sno, String title, String desc) {
-    titleController.text = title;
-    descController.text = desc;
-    showModalBottomSheet(
-        context: context,
-        builder: (context) {
-          return SingleChildScrollView(
-            child: Container(
-                padding: EdgeInsets.only(
-                    bottom: MediaQuery.of(context).viewInsets.bottom
-                ),
-                child: getBottomSheetWidget(isUpdate: true, Sno: sno)),
-          );
-        });
-  }
-
-  void _showDeleteConfirmationDialog(int sno) {
-    showDialog(
-        context: context,
-        builder: (context) {
-          return AlertDialog(
-            title: Text("Delete Note"),
-            content: Text("Are you sure you want to delete this note?"),
-            actions: [
-
-              TextButton(
-                  onPressed: () async {
-                    Navigator.pop(context);
-                    bool isDeleted = await dbRef!.deleteNote(sno: sno);
-
-                    if (isDeleted) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(content: Text("Note deleted successfully!")),
-                      );
-                      getNotes();
-                    } else {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(content: Text("Failed to delete note!!")),
-                      );
-                    }
-                  },
-                  child: Text("Delete")),
-              TextButton(
-                  onPressed: () {
-                    Navigator.pop(context);
-                  },
-                  child: Text("Cancel")),
-            ],
-          );
-        });
-  }
-
-
-  Widget getBottomSheetWidget({bool isUpdate = false, int Sno = 0}) {
-    return SingleChildScrollView(
-      child: Container(
-      
-        padding: EdgeInsets.all(11),
-        width: double.infinity,
-        child: Column(
-           mainAxisSize: MainAxisSize.min,
+      drawer: Drawer(
+        child: ListView(
+          padding: EdgeInsets.zero, // ensures DrawerHeader touches full width
           children: [
-            Text(
-              isUpdate ? "Update Note" : "Add Note",
-              style: TextStyle(fontSize: 25, fontWeight: FontWeight.bold),
-            ),
-            SizedBox(
-              height: 21,
-            ),
-            TextField(
-                controller: titleController,
-                decoration: InputDecoration(
-                  hintText: "Enter Note title here",
-                  label: Text("Title *"),
-                  focusedBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(11),
-                  ),
-                  enabledBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(11),
-                  ),
-                )),
-            SizedBox(
-              height: 11,
-            ),
-            TextField(
-                controller: descController,
-                maxLines: 4,
-                decoration: InputDecoration(
-                  hintText: "Enter Note here",
-                  label: Text("Note *"),
-                  focusedBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(11),
-                  ),
-                  enabledBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(11),
-                  ),
-                )),
-            Row(
-              children: [
-                Expanded(
-                  child: OutlinedButton(
-                      style: OutlinedButton.styleFrom(
-                          side: BorderSide(
-                            width: 1,
-                          ),
-                          shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(11))),
-                      onPressed: () async {
-                        // Navigator.pop(context);
-                        var title = titleController.text;
-                        var desc = descController.text;
-                        if (title.isNotEmpty && desc.isNotEmpty) {
-                          bool check = isUpdate
-                              ? await dbRef!.updateNote(
-                                  mTitle: title, mDesc: desc, sno: Sno)
-                              : await dbRef!.addNote(mTitle: title, mDesc: desc);
-                          if (check) {
-                            getNotes();
-                          }
-      
-                          titleController.clear();
-                          descController.clear();
-                          Navigator.pop(context);
-                        } else {
-                          ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-                              content:
-                                  Text("Please fill all the required blanks!!")));
-                        }
-      
-                      },
-                      child: Text(isUpdate ? "Update Note" : "Add Note")),
+            DrawerHeader(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [Colors.deepPurple, Colors.purpleAccent],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
                 ),
-                SizedBox(
-                  width: 10,
-                ),
-                Expanded(
-                    child: OutlinedButton(
-                        style: OutlinedButton.styleFrom(
-                            side: BorderSide(
-                              width: 1,
-                            ),
-                            shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(11))),
-                        onPressed: () {
-                          Navigator.pop(context);
-                        },
-                        child: Text("Cancel"))),
-              ],
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  CircleAvatar(
+                    backgroundColor: Colors.white,
+                    radius: 28,
+                    child: Icon(Icons.task, size: 30, color: Colors.purple),
+                  ),
+                  SizedBox(height: 10),
+                  Text(
+                    "Welcome!",
+                    style: TextStyle(fontSize: 20, color: Colors.white),
+                  ),
+                  Text(
+                    "Tap to explore tasks",
+                    style: TextStyle(fontSize: 14, color: Colors.white70),
+                  ),
+                ],
+              ),
             ),
-            SizedBox(
-              height: 15,
+            ListTile(
+              leading: Icon(Icons.check_circle_outline, color: Colors.deepPurple),
+              title: Text(
+                "TaskFlow",
+                style: TextStyle(fontSize: 16),
+              ),
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => taskPage()),
+                );
+              },
             ),
-            Text("$errorMsg"),
+            Divider(thickness: 1),
+            ListTile(
+              leading: Icon(Icons.logout, color: Colors.redAccent),
+              title: Text(
+                "Logout",
+                style: TextStyle(fontSize: 16),
+              ),
+              onTap: () {
+                Navigator.pop(context); // add your logout logic here if needed
+              },
+            ),
           ],
         ),
       ),
+
+      body:
+
+      Column(
+        children: [
+          Padding(
+            padding: const EdgeInsets.all(15.0),
+            child: Container(
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(20),
+                color: Color(themeChanger.isDark? 0xFF262626:0xFFccccff),
+              ),
+
+              height: 270,
+              child: Column(
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.only(left: 25,right: 25,top: 15),
+                    child: TextField(
+                      controller: titleController,
+                      style: TextStyle(color: themeChanger.isDark? Colors.white:Colors.black),
+                      decoration: InputDecoration(
+                          labelText: "Title",
+                          labelStyle:TextStyle(color: themeChanger.isDark? Colors.white:Colors.black),
+                          hintText: "Enter title",
+                          hintStyle: TextStyle(color: themeChanger.isDark? Colors.white54:Colors.black),
+                          filled: true,
+                          fillColor: themeChanger.isDark ? Colors.black:Colors.white,
+                          border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(20))),
+                    ),
+                  ),
+                  SizedBox(
+                    height: 20,
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.only(right: 25,left: 25),
+                    child: TextField(
+                      controller: descController,
+                      style: TextStyle(color: themeChanger.isDark? Colors.white:Colors.black),
+                      maxLines: 3,
+                      decoration: InputDecoration(
+                          labelText: "Note",
+                          labelStyle:TextStyle(color: themeChanger.isDark? Colors.white:Colors.black),
+                          hintText: "Write Note Here!",
+                          hintStyle: TextStyle(color: themeChanger.isDark? Colors.white54:Colors.black),
+                          filled: true,
+                          fillColor: themeChanger.isDark ? Colors.black:Colors.white,
+                          border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(20))),
+                    ),
+                  ),
+                  SizedBox(height: 10,),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceAround,
+                    children: [
+                      TextButton(
+                          onPressed: () {
+                            titleController.clear();
+                            descController.clear();
+                          },
+                          child: Text("Cancel",style:TextStyle(fontSize: 20,color:themeChanger.isDark?Colors.white:Colors.black))),
+                      ElevatedButton(
+                          onPressed: () {
+                            final title = titleController.text.trim();
+                            final desc = descController.text.trim();
+                            if(title.isEmpty || desc.isEmpty){
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                      content: Text("Please enter both title and note!",style: TextStyle(color: Colors.white,fontSize: 17),),
+                                      backgroundColor: Colors.red,
+                                    duration: Duration(seconds: 2),
+                                    behavior: SnackBarBehavior.floating,
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(15)
+                                    ),
+                                    margin: EdgeInsets.all(20),
+                                  ),
+                                  );
+                              return;
+                            }
+                            isExisting == null
+                                ? Provider.of<textFieldProvider>(context, listen: false)
+                                .addNote(title, desc)
+                                : Provider.of<textFieldProvider>(context, listen: false)
+                                .updateNote(title, desc, isExisting!.sno!);
+                            titleController.clear();
+                            descController.clear();
+                          },
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Color(0xFF8080ff),
+                            minimumSize: Size(120, 50),
+                            foregroundColor: Colors.white
+                          ),
+                          child: Text("Save",style: GoogleFonts.poppins(fontSize: 20,fontWeight: FontWeight.w600),)),
+
+                    ],
+                  )
+                ],
+              ),
+            ),
+          ),
+          Expanded(
+            child: noteList(
+              ondelete: (noteId){
+                showDeleteDialog(noteId);
+              },
+              onEdit: (note){
+                openNoteForm(context, isExisting:note);
+              }
+            )
+          ),
+        ],
+      ),
     );
   }
+
+  Future<void> showDeleteDialog(int noteId)async{
+    final themeChanger =Provider.of<themeProvider>(context,listen: false);
+    await showDialog(context: context, builder: (context)=>AlertDialog(
+
+      title: Text("Delete Note",style: TextStyle(color: themeChanger.isDark?Colors.white:Colors.black),),
+      content: Text("Are you sure you want to delete this note?",style: TextStyle(color: themeChanger.isDark?Colors.white:Colors.black),),
+      actions: [
+        TextButton(onPressed: (){
+          Navigator.pop(context);
+        }, child: Text("Cancel",style: TextStyle(color: themeChanger.isDark?Colors.white:Colors.black),)),
+        ElevatedButton(
+            onPressed: ()async{
+          await Provider.of<textFieldProvider>(context,
+              listen: false)
+              .deleteNote(noteId);
+          Navigator.pop(context);
+        },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Color(0xFF8080ff),
+              foregroundColor: Colors.white
+            ),
+            child: Text("Delete",style: TextStyle(fontWeight: FontWeight.w600,fontSize: 15),))
+      ],
+    ));
+  }
+  void openNoteForm(BuildContext context, {Note? isExisting}) {
+    this.isExisting = isExisting;
+    if (isExisting != null) {
+      titleController.text = isExisting.title ?? "";
+      descController.text = isExisting.desc ?? "";
+    } else {
+      titleController.clear();
+      descController.clear();
+    }
+  }
 }
+
+class noteList extends StatelessWidget{
+  final Function(int) ondelete;
+  final Function(Note) onEdit;
+  noteList({required this.ondelete,required this.onEdit});
+  @override
+  Widget build(BuildContext context) {
+    final themeChanger = Provider.of<themeProvider>(context,listen: false);
+
+    return Consumer<textFieldProvider>(
+        builder:(context,noteProvider,child){
+          return noteProvider.notes.isEmpty
+              ? Center(
+            child: Text(
+              "No Notes yet!",
+              style: TextStyle(fontSize: 20),
+            ),
+          )
+              : ListView.builder(
+            itemCount: noteProvider.notes.length,
+            itemBuilder: (context, index) {
+              final note = noteProvider.notes[index];
+              return Padding(
+                padding: const EdgeInsets.only(left: 10.0,bottom: 10,right: 10),
+                child: Container(
+                  decoration: BoxDecoration(
+                      border:Border.all(
+                        color: themeChanger.isDark?Colors.transparent: Color(0xFF8080ff),
+                        width: 2,
+                      ),
+                      borderRadius: BorderRadius.circular(20),
+                      color: themeChanger.isDark? Color(0xFF262626): Colors.white
+                  ),
+                  child: ListTile(
+                    title: Text(note.title,style: TextStyle(fontSize: 20,fontWeight: FontWeight.w600,color: themeChanger.isDark?Colors.white:Colors.black),),
+                    subtitle: Text(note.desc,style: TextStyle(fontSize: 18,fontWeight: FontWeight.normal,color:themeChanger.isDark?Colors.white70:Colors.black)),
+                    trailing: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        IconButton(
+                          onPressed: () {
+                           ondelete(note.sno!);
+                          },
+                          icon: Icon(Icons.delete,size: 30,color: themeChanger.isDark?Color(0xFFa6a6a6): Color(0xFF8080ff),),
+                        ),
+                        IconButton(
+                            onPressed: () {
+                              onEdit(note);
+                            },
+                            icon: Icon(Icons.edit,size: 30,color: themeChanger.isDark?Color(0xFFa6a6a6): Color(0xFF8080ff),)),
+
+                      ],
+                    ),
+                  ),
+                ),
+              );
+            },
+          );
+        } );
+
+  }
+}
+
